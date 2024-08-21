@@ -1,6 +1,13 @@
-﻿namespace IOT.Data.Repositories
+﻿using IOT.Entities.Models;
+
+namespace IOT.Data.Repositories
 {
-    public class CustomerRepository
+    public interface ICustomerRepository
+    {
+        
+    }
+
+    public class CustomerRepository : ICustomerRepository
     {
     }
 }

@@ -1,11 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace IOT.Entities.Models
 {
     public class Users
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public ObjectId Id { get; set; }
+
+        [BsonElement("UserID")]
+        [BsonRepresentation(BsonType.String)]
         [Required]
-        public string UserID { get; set; }
+        public Guid UserID { get; set; } = Guid.NewGuid();
 
         [Required]
         [EmailAddress]
@@ -20,9 +28,11 @@ namespace IOT.Entities.Models
         public string LastName { get; set; }
 
         [Required]
-        public string Role { get; set; } 
+        [BsonRepresentation(BsonType.String)]
+        public Guid RoleID { get; set; }
 
-        public string? CustomerID { get; set; }
+        [BsonRepresentation(BsonType.String)]
+        public Guid? CustomerID { get; set; }
 
         [Required]
         [StringLength(500, MinimumLength = 6)]

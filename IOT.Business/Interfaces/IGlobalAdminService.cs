@@ -5,10 +5,8 @@ namespace IOT.Business.Interfaces
 {
     public interface IGlobalAdminService
     {
-        Task<IEnumerable<UserDTO>> GetAllAdmins();
-        Task<UserDTO> GetAdminById(int id);
-        Task CreateAdmin(UserDTO adminDto);
-        Task UpdateAdmin(UserDTO adminDto);
-        Task DeleteAdminById(int id);
+        Task<string> RegisterUser(UserDTO user);
+        Task<string> RegisterGlobalAdmin(UserDTO admin);
+        Task<string> Login(string email, string password);
     }
 }

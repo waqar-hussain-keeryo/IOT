@@ -11,12 +11,10 @@ namespace IOT.Data
         public MongoDBContext(IConfiguration configuration)
         {
             var client = new MongoClient(configuration.GetConnectionString("MongoDB"));
-            _database = client.GetDatabase(configuration["IOTDB"]);
+            _database = client.GetDatabase(configuration["DatabaseName"]);
         }
 
         public IMongoCollection<Users> Users => _database.GetCollection<Users>("Users");
-        public IMongoCollection<Role> Roles => _database.GetCollection<Role>("Roles");
-        public IMongoCollection<ProductType> ProductTypes => _database.GetCollection<ProductType>("ProductTypes");
-        public IMongoCollection<Customer> Customers => _database.GetCollection<Customer>("Customers");
+        public IMongoCollection<Role> Roles => _database.GetCollection<Role>("Role");
     }
 }

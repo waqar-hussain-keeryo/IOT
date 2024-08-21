@@ -1,11 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace IOT.Entities.Models
 {
     public class Customer
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public ObjectId Id { get; set; }
+
+        [BsonElement("CustomerID")]
+        [BsonRepresentation(BsonType.String)]
         [Required]
-        public string CustomerID { get; set; }
+        public Guid CustomerID { get; set; } = Guid.NewGuid();
 
         [Required]
         [StringLength(100)]
@@ -23,7 +31,6 @@ namespace IOT.Entities.Models
         public string CustomerCity { get; set; }
 
         [Required]
-        [StringLength(10)]
         public string CustomerRegion { get; set; }
 
         public bool IsActive { get; set; }
@@ -55,7 +62,7 @@ namespace IOT.Entities.Models
     public class Device
     {
         [Required]
-        public string DeviceID { get; set; }
+        public ObjectId DeviceID { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -70,7 +77,7 @@ namespace IOT.Entities.Models
     public class DigitalService
     {
         [Required]
-        public string DigitalServiceID { get; set; }
+        public ObjectId DigitalServiceID { get; set; }
 
         [Required]
         public DateTime ServiceStartDate { get; set; }

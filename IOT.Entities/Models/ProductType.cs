@@ -1,11 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace IOT.Entities.Models
 {
     public class ProductType
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public ObjectId Id { get; set; }
+
+        [BsonElement("ProductTypeID")]
+        [BsonRepresentation(BsonType.String)]
         [Required]
-        public string ProductTypeID { get; set; }
+        public Guid ProductTypeID { get; set; } = Guid.NewGuid();
 
         [Required]
         [StringLength(100)]
