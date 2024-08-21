@@ -19,7 +19,7 @@ namespace IOT.Api.Controllers
 
         
         [HttpPost("RegisterAdmin")]
-        [AllowAnonymous] // Allow anonymous access for first-time registration
+        [AllowAnonymous]
         public async Task<IActionResult> RegisterAdmin([FromBody] UserDTO user)
         {
             if (user == null)
@@ -36,39 +36,6 @@ namespace IOT.Api.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
             }
-        }
-
-        [Authorize]
-        [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] UserDTO userDto)
-        {
-            try
-            {
-                var token = await _globalAdminService.RegisterUser(userDto);
-                return Ok(new { Token = token });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { Error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Error = ex.Message });
-            }
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(string email, string password)
-        {
-            try
-            {
-                var token = await _globalAdminService.Login(email, password);
-                return Ok(new { Token = token });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(ex.Message);
-            }
-        }
+        } 
     }
 }

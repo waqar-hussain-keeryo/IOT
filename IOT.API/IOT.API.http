@@ -1,6 +1,0 @@
-@IOT.API_HostAddress = http://localhost:5139
-
-GET {{IOT.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
