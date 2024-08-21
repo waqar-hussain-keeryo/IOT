@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/IOT.API/obj
+/IOT.Business/obj
+/IOT.Data/obj
+/IOT.Entities/obj
