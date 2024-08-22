@@ -1,8 +1,6 @@
 ﻿using IOT.Business.Interfaces;
-using IOT.Business.Services;
 using IOT.Entities.DTO;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IOT.Api.Controllers
@@ -17,7 +15,6 @@ namespace IOT.Api.Controllers
             _globalAdminService = globalAdminService;
         }
 
-        
         [HttpPost("RegisterAdmin")]
         [AllowAnonymous]
         public async Task<IActionResult> RegisterAdmin([FromBody] UserDTO user)

@@ -69,7 +69,7 @@ namespace IOT.Entities.Models
         public string DeviceName { get; set; }
 
         [Required]
-        public string ProductType { get; set; } // Should be a GUID reference to ProductType entity
+        public string ProductType { get; set; }
 
         public double ThreSholdValue { get; set; }
     }

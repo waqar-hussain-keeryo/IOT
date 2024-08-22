@@ -1,5 +1,4 @@
-﻿using IOT.Business.Validations;
-using IOT.Entities.DTO;
+﻿using IOT.Entities.DTO;
 
 namespace IOT.Business.Interfaces
 {

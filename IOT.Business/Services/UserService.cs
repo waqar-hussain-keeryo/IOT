@@ -2,10 +2,6 @@
 using IOT.Data.Repositories;
 using IOT.Entities.DTO;
 using IOT.Entities.Models;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace IOT.Business.Services
 {
@@ -18,6 +14,20 @@ namespace IOT.Business.Services
         {
             _userRepository = userRepository;
             _jwtTokenGenerator = jwtTokenGenerator;
+        }
+
+        public async Task<string> Login(string email, string password)
+        {
+            var user = await _userRepository.GetUserByEmail(email);
+            var role = await _userRepository.GetRoleById(user.RoleID);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
+            {
+                throw new UnauthorizedAccessException("Invalid email or password.");
+            }
+
+            var token = _jwtTokenGenerator.GenerateToken(user, role.RoleName);
+            return token;
         }
 
         public async Task<string> RegisterUser(UserDTO user)
@@ -44,20 +54,6 @@ namespace IOT.Business.Services
             await _userRepository.CreateUser(newUser);
 
             var token = _jwtTokenGenerator.GenerateToken(newUser, user.RoleName);
-            return token;
-        }
-
-        public async Task<string> Login(string email, string password)
-        {
-            var user = await _userRepository.GetUserByEmail(email);
-            var role = await _userRepository.GetRoleById(user.RoleID);
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
-            {
-                throw new UnauthorizedAccessException("Invalid email or password.");
-            }
-
-            var token = _jwtTokenGenerator.GenerateToken(user, role.RoleName);
             return token;
         }
 

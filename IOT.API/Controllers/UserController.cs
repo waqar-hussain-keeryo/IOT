@@ -1,9 +1,7 @@
 ﻿using IOT.Business.Interfaces;
-using IOT.Business.Services;
 using IOT.Entities.DTO;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IOT.Api.Controllers
 {
@@ -16,20 +14,6 @@ namespace IOT.Api.Controllers
         public UserController(IUserService userService)
         {
             _userService = userService;
-        }
-
-        [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] UserDTO userDto)
-        {
-            try
-            {
-                var token = await _userService.RegisterUser(userDto);
-                return Ok(new { Token = token });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(ex.Message);
-            }
         }
 
         [HttpPost("Login")]
@@ -46,6 +30,22 @@ namespace IOT.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] UserDTO userDto)
+        {
+            try
+            {
+                var token = await _userService.RegisterUser(userDto);
+                return Ok(new { Token = token });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("CreateRole")]
         public async Task<IActionResult> CreateRole([FromBody] RoleDTO role)
         {

@@ -1,13 +1,7 @@
-﻿using FluentValidation;
-using IOT.Business.Interfaces;
+﻿using IOT.Business.Interfaces;
 using IOT.Data.Repositories;
 using IOT.Entities.DTO;
 using IOT.Entities.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace IOT.Business.Services
 {
