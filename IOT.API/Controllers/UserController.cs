@@ -2,6 +2,7 @@
 using IOT.Entities.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace IOT.Api.Controllers
 {
@@ -10,10 +11,12 @@ namespace IOT.Api.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IHttpContextAccessor httpContextAccessor)
         {
             _userService = userService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         [HttpPost("Login")]
@@ -30,13 +33,14 @@ namespace IOT.Api.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] UserDTO userDto)
         {
             try
             {
-                var token = await _userService.RegisterUser(userDto);
+                var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
+                var token = await _userService.RegisterUser(userDto, userId);
                 return Ok(new { Token = token });
             }
             catch (UnauthorizedAccessException ex)
@@ -45,17 +49,38 @@ namespace IOT.Api.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpPost("CreateRole")]
-        public async Task<IActionResult> CreateRole([FromBody] RoleDTO role)
+        [Authorize(Roles = "Customer")]
+        [HttpGet("GetAllUsersByCustomer")]
+        public async Task<IActionResult> GetAllUsersByCustomer()
         {
-            if (role == null)
+            try
             {
-                return BadRequest("Role object is null");
+                var customerId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
+                var users = await _userService.GetAllUsersByCustomerId(customerId);
+                return Ok(users);
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
 
-            await _userService.CreateRole(role);
-            return Ok();
+        [Authorize]
+        [HttpGet("GetUserByEmail")]
+        public async Task<IActionResult> GetUserByEmail(string email)
+        {
+            try
+            {
+                var user = await _userService.GetUserByEmail(email);
+                if (user == null)
+                    return NotFound("User not found.");
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }
