@@ -10,7 +10,7 @@ namespace IOT.Data.Repositories
     {
         Task<Users> CreateUser(Users user);
         Task<IEnumerable<Users>> GetAllUsers();
-        Task<IEnumerable<Users>> GetAllUsersByCustomerId(Guid customerId);
+        Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, int pageNumber, int pageSize);
         Task<Users> GetUserByEmail(string email);
         Task<Users> GetUserById(Guid userId);
         Task<Users> GetUserByRoleId(Guid roleId);
@@ -41,9 +41,25 @@ namespace IOT.Data.Repositories
             return await _context.Users.Find(_ => true).ToListAsync();
         }
 
-        public async Task<IEnumerable<Users>> GetAllUsersByCustomerId(Guid customerId)
+        public async Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, int pageNumber, int pageSize)
         {
-            return await _context.Users.Find(u => u.CustomerID == customerId).ToListAsync();
+            // Validate parameters
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10; // Default page size if less than 1
+
+            // Get the collection from the database
+            var collection = _context.GetCollection<Users>("Users");
+
+            // Query to get the total number of records
+            var totalRecords = await collection.CountDocumentsAsync(u => u.CustomerID == customerId);
+
+            // Query to get the paginated users
+            var users = await collection.Find(u => u.CustomerID == customerId)
+                                        .Skip((pageNumber - 1) * pageSize)  // Skip records for previous pages
+                                        .Limit(pageSize)                    // Limit records for the current page
+                                        .ToListAsync();
+
+            return (users, (int)totalRecords);
         }
 
         public async Task<Users> GetUserByEmail(string email)

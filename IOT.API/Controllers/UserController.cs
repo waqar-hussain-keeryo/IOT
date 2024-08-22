@@ -24,44 +24,125 @@ namespace IOT.Api.Controllers
         {
             try
             {
-                var token = await _userService.Login(email, password);
-                return Ok(new { Token = token });
+                var response = await _userService.Login(email, password);
+
+                if (response.Success)
+                {
+                    return Ok(new ApiResponse
+                    {
+                        Success = true,
+                        Message = "Login successful.",
+                        Data = response.Data
+                    });
+                }
+                else
+                {
+                    return Unauthorized(new ApiResponse
+                    {
+                        Success = false,
+                        Message = response.Message
+                    });
+                }
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(ex.Message);
+                return Unauthorized(new ApiResponse
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred: " + ex.Message
+                });
             }
         }
 
+
         [Authorize(Roles = "Admin,Customer")]
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] UserDTO userDto)
+        public async Task<IActionResult> Register([FromBody] UserDTO user)
         {
             try
             {
                 var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var token = await _userService.RegisterUser(userDto, userId);
-                return Ok(new { Token = token });
+                var response = await _userService.RegisterUser(user, userId);
+
+                return response.Success
+                   ? Ok(new ApiResponse
+                   {
+                       Success = true,
+                       Message = response.Message,
+                       Data = response.Data
+                   })
+                   : BadRequest(new ApiResponse
+                   {
+                       Success = false,
+                       Message = response.Message
+                   });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(ex.Message);
+                return Unauthorized(new ApiResponse
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
             }
         }
 
         [Authorize(Roles = "Customer")]
         [HttpGet("GetAllUsersByCustomer")]
-        public async Task<IActionResult> GetAllUsersByCustomer()
+        public async Task<IActionResult> GetAllUsersByCustomer(int pageNumber, int pageSize)
         {
             try
             {
                 var customerId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var users = await _userService.GetAllUsersByCustomerId(customerId);
-                return Ok(users);
+
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = "Customer ID not found."
+                    });
+                }
+
+                // Retrieve all users by customer ID
+                var response = await _userService.GetAllUsersByCustomerId(customerId, pageNumber, pageSize);
+
+                return response.Success
+                    ? Ok(new ApiResponse
+                    {
+                        Success = true,
+                        Message = response.Message,
+                        Data = response.Data
+                    })
+                    : BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = response.Message
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred: " + ex.Message
+                });
             }
         }
 
@@ -71,16 +152,40 @@ namespace IOT.Api.Controllers
         {
             try
             {
-                var user = await _userService.GetUserByEmail(email);
-                if (user == null)
-                    return NotFound("User not found.");
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = "Email cannot be null or empty."
+                    });
+                }
 
-                return Ok(user);
+                var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
+                var response = await _userService.GetUserByEmail(email, userId);
+
+                return response.Success
+                     ? Ok(new ApiResponse
+                     {
+                         Success = true,
+                         Message = response.Message,
+                         Data = response.Data
+                     })
+                     : BadRequest(new ApiResponse
+                     {
+                         Success = false,
+                         Message = response.Message
+                     });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred: " + ex.Message
+                });
             }
         }
+
     }
 }

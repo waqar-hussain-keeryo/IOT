@@ -16,5 +16,10 @@ namespace IOT.Data
 
         public IMongoCollection<Users> Users => _database.GetCollection<Users>("Users");
         public IMongoCollection<Role> Roles => _database.GetCollection<Role>("Role");
+
+        public IMongoCollection<Users> GetCollection<Users>(string collectionName)
+        {
+            return _database.GetCollection<Users>(collectionName);
+        }
     }
 }

@@ -23,17 +23,39 @@ namespace IOT.Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RegisterAdmin([FromBody] UserDTO user)
         {
+            if (user == null)
+            {
+                return BadRequest(new ApiResponse
+                {
+                    Success = false,
+                    Message = "Admin data is required."
+                });
+            }
+
             try
             {
-                if (user == null)
-                    return BadRequest("Admin data is required.");
+                var response = await _globalAdminService.RegisterGlobalAdmin(user);
 
-                await _globalAdminService.RegisterGlobalAdmin(user);
-                return Ok("Global admin registered successfully.");
+                return response.Success
+                    ? Ok(new ApiResponse
+                    {
+                        Success = true,
+                        Message = response.Message,
+                        Data = response.Data
+                    })
+                    : BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = response.Message
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred."
+                });
             }
         }
 
@@ -43,16 +65,28 @@ namespace IOT.Api.Controllers
         {
             try
             {
-                var users = await _userService.GetAllUsers();
-                
-                if (users == null || !users.Any())
-                    return NotFound("No users found.");
+                var response = await _userService.GetAllUsers();
 
-                return Ok(users);
+                return response.Success
+                    ? Ok(new ApiResponse
+                    {
+                        Success = true,
+                        Message = response.Message ?? "Users retrieved successfully.",
+                        Data = response.Data
+                    })
+                    : BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = response.Message
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred: " + ex.Message
+                });
             }
         }
 
@@ -63,15 +97,39 @@ namespace IOT.Api.Controllers
             try
             {
                 if (role == null)
-                    return BadRequest("Role object is null");
+                {
+                    return BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = "Role object is null."
+                    });
+                }
 
-                await _userService.CreateRole(role);
-                return Ok(role);
+                // Call the service method to create the role
+                var response = await _userService.CreateRole(role);
+
+                return response.Success
+                    ? Ok(new ApiResponse
+                    {
+                        Success = true,
+                        Message = response.Message,
+                        Data = response.Data
+                    })
+                    : BadRequest(new ApiResponse
+                    {
+                        Success = false,
+                        Message = response.Message
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred: " + ex.Message
+                });
             }
         }
+
     }
 }

@@ -6,10 +6,6 @@ namespace IOT.Entities.DTO
 {
     public class RoleDTO
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public ObjectId Id { get; set; }
-
         [BsonElement("RoleID")]
         [BsonRepresentation(BsonType.String)]
         [Required]

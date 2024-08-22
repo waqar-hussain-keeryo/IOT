@@ -6,10 +6,6 @@ namespace IOT.Entities.DTO
 {
     public class CustomerDTO
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public ObjectId Id { get; set; }
-
         [BsonElement("CustomerID")]
         [BsonRepresentation(BsonType.String)]
         [Required]
