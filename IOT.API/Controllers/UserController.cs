@@ -3,6 +3,7 @@ using IOT.Entities.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using IOT.Entities.Request;
 
 namespace IOT.Api.Controllers
 {
@@ -20,52 +21,30 @@ namespace IOT.Api.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<IActionResult> Login(string email, string password)
+        public async Task<IActionResult> Login(LoginRequest request)
         {
             try
             {
-                var response = await _userService.Login(email, password);
+                var response = await _userService.Login(request);
 
-                if (response.Success)
-                {
-                    return Ok(new ApiResponse
-                    {
-                        Success = true,
-                        Message = "Login successful.",
-                        Data = response.Data
-                    });
-                }
-                else
-                {
-                    return Unauthorized(new ApiResponse
-                    {
-                        Success = false,
-                        Message = response.Message
-                    });
-                }
+                return response.Success
+                   ? Ok(new ApiResponse(true, response.Message, response.Data))
+                   : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new ApiResponse
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return Unauthorized(new ApiResponse(false, ex.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 
-
         [Authorize(Roles = "Admin,Customer")]
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] UserDTO user)
+        public async Task<IActionResult> Register([FromBody] UserRequest user)
         {
             try
             {
@@ -73,76 +52,37 @@ namespace IOT.Api.Controllers
                 var response = await _userService.RegisterUser(user, userId);
 
                 return response.Success
-                   ? Ok(new ApiResponse
-                   {
-                       Success = true,
-                       Message = response.Message,
-                       Data = response.Data
-                   })
-                   : BadRequest(new ApiResponse
-                   {
-                       Success = false,
-                       Message = response.Message
-                   });
+                  ? Ok(new ApiResponse(true, response.Message, response.Data))
+                  : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new ApiResponse
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return Unauthorized(new ApiResponse(false, ex.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new ApiResponse
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 
         [Authorize(Roles = "Customer")]
         [HttpGet("GetAllUsersByCustomer")]
-        public async Task<IActionResult> GetAllUsersByCustomer(int pageNumber, int pageSize)
+        public async Task<IActionResult> GetAllUsersByCustomer(PaginationRequest request)
         {
             try
             {
                 var customerId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-
-                if (string.IsNullOrEmpty(customerId))
-                {
-                    return BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "Customer ID not found."
-                    });
-                }
-
-                // Retrieve all users by customer ID
-                var response = await _userService.GetAllUsersByCustomerId(customerId, pageNumber, pageSize);
+                var response = await _userService.GetAllUsersByCustomerId(customerId, request);
 
                 return response.Success
-                    ? Ok(new ApiResponse
-                    {
-                        Success = true,
-                        Message = response.Message,
-                        Data = response.Data
-                    })
-                    : BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = response.Message
-                    });
+                  ? Ok(new ApiResponse(true, response.Message, response.Data))
+                  : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 
@@ -154,38 +94,20 @@ namespace IOT.Api.Controllers
             {
                 if (string.IsNullOrWhiteSpace(email))
                 {
-                    return BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "Email cannot be null or empty."
-                    });
+                    return BadRequest(new ApiResponse(false, "Email cannot be null or empty."));
                 }
 
-                var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var response = await _userService.GetUserByEmail(email, userId);
+                var response = await _userService.GetUserByEmail(email);
 
                 return response.Success
-                     ? Ok(new ApiResponse
-                     {
-                         Success = true,
-                         Message = response.Message,
-                         Data = response.Data
-                     })
-                     : BadRequest(new ApiResponse
-                     {
-                         Success = false,
-                         Message = response.Message
-                     });
+                  ? Ok(new ApiResponse(true, response.Message, response.Data))
+                  : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
-
     }
 }

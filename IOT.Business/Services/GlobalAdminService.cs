@@ -2,6 +2,7 @@
 using IOT.Data.Repositories;
 using IOT.Entities.DTO;
 using IOT.Entities.Models;
+using IOT.Entities.Request;
 
 namespace IOT.Business.Services
 {
@@ -16,17 +17,12 @@ namespace IOT.Business.Services
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
-        public async Task<ResponseDTO> RegisterGlobalAdmin(UserDTO user)
+        public async Task<ResponseDTO> RegisterGlobalAdmin(UserRequest user)
         {
-            // Check if user already exists
             var existingUser = await _userRepository.GetUserByEmail(user.Email);
             if (existingUser != null)
             {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "Admin already registered."
-                };
+                return new ResponseDTO(false, "Admin already registered.");
             }
 
             // Check if the role exists
@@ -35,14 +31,9 @@ namespace IOT.Business.Services
 
             // Check if current admin exists
             var currentAdmin = await _userRepository.GetUserByRoleId(globalAdminRoleId);
-
             if (currentAdmin != null)
             {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "Only one global admin allowed."
-                };
+                return new ResponseDTO(false, "Only one global admin allowed.");
             }
 
             // Create role if it doesn't exist
@@ -54,7 +45,8 @@ namespace IOT.Business.Services
                     RoleDescription = "Global Administrator role"
                 };
 
-                globalAdminRoleId = await _userRepository.CreateRole(newRole);
+                var roleResponse = await _userRepository.CreateRole(newRole);
+                globalAdminRoleId = roleResponse.RoleID;
             }
 
             // Create the global admin user
@@ -67,16 +59,19 @@ namespace IOT.Business.Services
                 RoleID = globalAdminRoleId
             };
 
-            await _userRepository.CreateUser(admin);
+            var userResponse = await _userRepository.CreateUser(admin);
+
+            var responseDTO = new UserDTO(userResponse);
 
             // Generate and secure the token
             var token = _jwtTokenGenerator.GenerateToken(admin, "Admin");
+            responseDTO.Token = token;
 
             return new ResponseDTO
             {
                 Success = true,
                 Message = "Global admin registered successfully.",
-                Data = new { Token = token }
+                Data = responseDTO
             };
         }
     }

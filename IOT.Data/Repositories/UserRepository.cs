@@ -3,14 +3,16 @@ using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using IOT.Business.Services;
+using IOT.Entities.Request;
+using IOT.Entities.DTO;
 
 namespace IOT.Data.Repositories
 {
     public interface IUserRepository
     {
         Task<Users> CreateUser(Users user);
-        Task<IEnumerable<Users>> GetAllUsers();
-        Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, int pageNumber, int pageSize);
+        Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsers(PaginationRequest request);
+        Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, PaginationRequest request);
         Task<Users> GetUserByEmail(string email);
         Task<Users> GetUserById(Guid userId);
         Task<Users> GetUserByRoleId(Guid roleId);
@@ -18,7 +20,8 @@ namespace IOT.Data.Repositories
         Task DeleteUser(Guid userId);
         Task<Role> GetRoleByName(string roleName);
         Task<Role> GetRoleById(Guid roleId);
-        Task<Guid> CreateRole(Role role);
+        Task<Role> CreateRole(Role role);
+        Task<Role> UpdateRole(Guid roleId, Role updatedRole);
     }
 
     public class UserRepository : IUserRepository
@@ -36,27 +39,33 @@ namespace IOT.Data.Repositories
             return user;
         }
 
-        public async Task<IEnumerable<Users>> GetAllUsers()
+        public async Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsers(PaginationRequest request)
         {
-            return await _context.Users.Find(_ => true).ToListAsync();
+            if (request.PageNumber < 1) request.PageNumber = 1;
+            if (request.PageSize < 1) request.PageSize = 10;
+
+            var collection = _context.GetCollection<Users>("Users");
+            var totalRecords = await collection.CountDocumentsAsync(_ => true);
+
+            var users = await collection.Find(_ => true)
+                                  .Skip((request.PageNumber - 1) * request.PageSize)
+                                  .Limit(request.PageSize)
+                                  .ToListAsync();
+
+            return (users, (int)totalRecords);
         }
 
-        public async Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, int pageNumber, int pageSize)
+        public async Task<(IEnumerable<Users> Users, int TotalRecords)> GetAllUsersByCustomerId(Guid customerId, PaginationRequest request)
         {
-            // Validate parameters
-            if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1) pageSize = 10; // Default page size if less than 1
+            if (request.PageNumber < 1) request.PageNumber = 1;
+            if (request.PageSize < 1) request.PageSize = 10;
 
-            // Get the collection from the database
             var collection = _context.GetCollection<Users>("Users");
-
-            // Query to get the total number of records
             var totalRecords = await collection.CountDocumentsAsync(u => u.CustomerID == customerId);
 
-            // Query to get the paginated users
             var users = await collection.Find(u => u.CustomerID == customerId)
-                                        .Skip((pageNumber - 1) * pageSize)  // Skip records for previous pages
-                                        .Limit(pageSize)                    // Limit records for the current page
+                                        .Skip((request.PageNumber - 1) * request.PageSize)  // Skip records for previous pages
+                                        .Limit(request.PageSize)
                                         .ToListAsync();
 
             return (users, (int)totalRecords);
@@ -98,7 +107,7 @@ namespace IOT.Data.Repositories
             return await _context.Roles.Find(r => r.RoleName == roleName).FirstOrDefaultAsync();
         }
 
-        public async Task<Guid> CreateRole(Role role)
+        public async Task<Role> CreateRole(Role role)
         {
             if (role.RoleID == Guid.Empty)
             {
@@ -107,7 +116,23 @@ namespace IOT.Data.Repositories
 
             await _context.Roles.InsertOneAsync(role);
 
-            return role.RoleID;
+            return role;
         }
+
+        public async Task<Role> UpdateRole(Guid roleId, Role updatedRole)
+        {
+            var filter = Builders<Role>.Filter.Eq(r => r.RoleID, roleId);
+
+            var updateDefinition = Builders<Role>.Update
+                .Combine(
+                    updatedRole.RoleName != null ? Builders<Role>.Update.Set(r => r.RoleName, updatedRole.RoleName) : null,
+                    updatedRole.RoleDescription != null ? Builders<Role>.Update.Set(r => r.RoleName, updatedRole.RoleName) : null
+                );
+
+            var result = await _context.Roles.UpdateOneAsync(filter, updateDefinition);
+
+            return updatedRole;
+        }
+
     }
 }

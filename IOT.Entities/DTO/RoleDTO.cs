@@ -1,20 +1,22 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
 using System.ComponentModel.DataAnnotations;
+using IOT.Entities.Models;
 
 namespace IOT.Entities.DTO
 {
     public class RoleDTO
     {
-        [BsonElement("RoleID")]
-        [BsonRepresentation(BsonType.String)]
-        [Required]
-        public Guid RoleID { get; set; } = Guid.NewGuid();
+        public RoleDTO() { }
 
-        [Required]
-        [StringLength(100)]
+        public RoleDTO(Role role)
+        {
+            RoleID = role.RoleID;
+            RoleName = role.RoleName;
+            RoleDescription = role.RoleDescription;
+        }
+        public Guid RoleID { get; set; }
         public string RoleName { get; set; }
-
         public string RoleDescription { get; set; }
     }
 }

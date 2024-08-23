@@ -1,7 +1,9 @@
 ﻿using IOT.Business.Interfaces;
 using IOT.Data.Repositories;
+using IOT.Entities.Common;
 using IOT.Entities.DTO;
 using IOT.Entities.Models;
+using IOT.Entities.Request;
 
 namespace IOT.Business.Services
 {
@@ -16,94 +18,63 @@ namespace IOT.Business.Services
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
-        public async Task<ResponseDTO> Login(string email, string password)
+        //Access All Users
+        public async Task<ResponseDTO> Login(LoginRequest request)
         {
             try
             {
-                var user = await _userRepository.GetUserByEmail(email);
-                if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))
+                var user = await _userRepository.GetUserByEmail(request.Email);
+                if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                 {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Invalid email or password."
-                    };
+                    return new ResponseDTO(false, "Invalid email or password.");
                 }
 
                 var role = await _userRepository.GetRoleById(user.RoleID);
                 var token = _jwtTokenGenerator.GenerateToken(user, role.RoleName);
+                var loginResponse = new LoginResponseDTO(user.Email, role.RoleName, token);
 
-                var loginResponse = new LoginResponseDTO
-                {
-                    Email = user.Email,
-                    Token = token,
-                };
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Login successful.",
-                    Data = loginResponse
-                };
+                return new ResponseDTO(true, "Login Successfull.", loginResponse);
             }
             catch (Exception ex)
             {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
             }
         }
 
-        public async Task<ResponseDTO> RegisterUser(UserDTO user, string customerId)
+        //Access All Users
+        public async Task<ResponseDTO> RegisterUser(UserRequest user, string customerId)
         {
             try
             {
                 if (user.RoleName == "Admin")
                 {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Admin role cannot be registered by this method. Please contact your administrator."
-                    };
+                    return new ResponseDTO(false, "Admin role cannot be registered by this method. Please contact your administrator.");
                 }
 
                 var existingUser = await _userRepository.GetUserByEmail(user.Email);
                 if (existingUser != null)
                 {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "User already registered."
-                    };
+                    return new ResponseDTO(false, "User already registered.");
                 }
 
                 var role = await _userRepository.GetRoleByName(user.RoleName);
                 if (role == null)
                 {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role does not exist."
-                    };
+                    return new ResponseDTO(false, "Role does not exist.");
                 }
 
                 // Convert customerId from string to Guid
                 Guid? customerGuid = null;
                 if (!string.IsNullOrWhiteSpace(customerId))
                 {
-                    if (Guid.TryParse(customerId, out var parsedGuid))
+                    var parsedGuid = CommonMethods.ValidateGuid(customerId);
+                    if (customerGuid == Guid.Empty)
                     {
-                        customerGuid = parsedGuid;
+                        return new ResponseDTO(false, "Invalid user ID format.");
                     }
                     else
                     {
-                        return new ResponseDTO
-                        {
-                            Success = false,
-                            Message = "Invalid customer ID format."
-                        };
+                        customerGuid = parsedGuid;
                     }
                 }
 
@@ -118,41 +89,131 @@ namespace IOT.Business.Services
                     CustomerID = user.RoleName == "User" ? customerGuid : null,
                 };
 
-                await _userRepository.CreateUser(newUser);
-
+                var userResponse = await _userRepository.CreateUser(newUser);
                 var token = _jwtTokenGenerator.GenerateToken(newUser, user.RoleName);
+                var loginResponse = new LoginResponseDTO(user.Email, role.RoleName, token);
 
-                var loginResponse = new LoginResponseDTO
+                var responseData = new
                 {
-                    Email = user.Email,
-                    Token = token,
+                    RegisteredUser = loginResponse,
+                    DemoUser = ""
                 };
 
-                return new ResponseDTO
+                // Add demo user if a customer was registered
+                if (user.RoleName == "Customer")
                 {
-                    Success = true,
-                    Message = "User registered successfully.",
-                    Data = loginResponse
-                };
+                    var userRole = await _userRepository.GetRoleByName("User");
+                    if (userRole != null)
+                    {
+                        var demoUser = new Users
+                        {
+                            Email = $"demoUser_{user.Email}",
+                            FirstName = "Demo",
+                            LastName = "User",
+                            Password = BCrypt.Net.BCrypt.HashPassword("Demo123!"),
+                            RoleID = userRole.RoleID,
+                            CustomerID = userResponse.UserID
+                        };
+
+                        var response = await _userRepository.CreateUser(demoUser);
+
+                        responseData = new
+                        {
+                            RegisteredUser = loginResponse,
+                            DemoUser = response.Email
+                        };
+                    }  
+                }
+
+                return new ResponseDTO(true, "User registered successfully." + (responseData.DemoUser != null ? " Demo user created successfully." : string.Empty), responseData);
             }
             catch (Exception ex)
             {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
             }
         }
 
-        public async Task<ResponseDTO> GetAllUsers()
+        //Access All Users
+        public async Task<ResponseDTO> GetUserByEmail(string email)
         {
             try
             {
-                // Retrieve all users from the repository
-                var users = await _userRepository.GetAllUsers();
+                var user = await _userRepository.GetUserByEmail(email);
+                if (user == null)
+                {
+                    return new ResponseDTO(false, "User not found.");
+                }
 
-                // Fetch role names and map users to UserDTOs
+                var role = await _userRepository.GetRoleById(user.RoleID);
+                var userDTO = new UserDTO
+                {
+                    UserID = user.UserID,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    RoleName = role.RoleName
+                };
+
+                return new ResponseDTO(true, "User retrieved successfully.", userDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
+        //Access Only Customer
+        public async Task<ResponseDTO> GetAllUsersByCustomerId(string customerId, PaginationRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(customerId))
+                {
+                    return new ResponseDTO(false, "Customer ID cannot be null or empty.");
+                }
+
+                // Parse customerId to Guid
+                var customerGuid = CommonMethods.ValidateGuid(customerId);
+                if (customerGuid == Guid.Empty)
+                {
+                    return new ResponseDTO(false, "Invalid user ID format.");
+                }
+
+                var (users, totalRecords) = await _userRepository.GetAllUsersByCustomerId(customerGuid, request);
+
+                var userDTOs = users.Select(u => new UserDTO
+                {
+                    UserID = u.UserID,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    RoleID = u.RoleID,
+                    CustomerID = customerGuid,
+                    Password = u.Password,
+                    EmailVerified = u.EmailVerified
+                }).ToList();
+
+                return new ResponseDTO(true, "Users retrieved successfully.",
+                    new
+                    {
+                        Users = userDTOs,
+                        TotalRecords = totalRecords,
+                        PageNumber = request.PageNumber,
+                        PageSize = request.PageSize
+                    });
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
+        //Access Only Admin
+        public async Task<ResponseDTO> GetAllUsers(PaginationRequest request)
+        {
+            try
+            {
+                var (users, totalRecords) = await _userRepository.GetAllUsers(request);
                 var userDTOs = users.Select(async u =>
                 {
                     var role = await _userRepository.GetRoleById(u.RoleID);
@@ -162,376 +223,90 @@ namespace IOT.Business.Services
                         Email = u.Email,
                         FirstName = u.FirstName,
                         LastName = u.LastName,
-                        RoleName = role.RoleName
+                        RoleID = role.RoleID,
+                        RoleName = role.RoleName,
+                        CustomerID = u.CustomerID,
+                        Password = u.Password,
+                        EmailVerified = u.EmailVerified
                     };
                 }).ToList();
 
                 // Wait for all userDTO tasks to complete
-                var userDTOList = await Task.WhenAll(userDTOs);
+                var userList = await Task.WhenAll(userDTOs);
 
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Users retrieved successfully.",
-                    Data = userDTOList
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> GetAllUsersByCustomerId(string customerId, int pageNumber = 1, int pageSize = 10)
-        {
-            if (pageNumber < 1)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "Page number must be greater than zero."
-                };
-            }
-
-            if (pageSize < 1)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "Page size must be greater than zero."
-                };
-            }
-
-            try
-            {
-                // Validate input
-                if (string.IsNullOrWhiteSpace(customerId))
-                {
-                    return new ResponseDTO
+                return new ResponseDTO(true, "Users retrieved successfully.",
+                    new
                     {
-                        Success = false,
-                        Message = "Customer ID cannot be null or empty."
-                    };
-                }
-
-                // Parse customerId to Guid
-                if (!Guid.TryParse(customerId, out var customerGuid))
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Invalid customer ID format."
-                    };
-                }
-
-                // Retrieve paginated users by customer ID
-                var (users, totalRecords) = await _userRepository.GetAllUsersByCustomerId(customerGuid, pageNumber, pageSize);
-
-                // Map to UserDTO
-                var userDTOs = users.Select(u => new UserDTO
-                {
-                    UserID = u.UserID,
-                    Email = u.Email,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName
-                }).ToList();
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Users retrieved successfully.",
-                    Data = new
-                    {
-                        Users = userDTOs,
+                        Users = userList,
                         TotalRecords = totalRecords,
-                        PageNumber = pageNumber,
-                        PageSize = pageSize
-                    }
-                };
+                        PageNumber = request.PageNumber,
+                        PageSize = request.PageSize
+                    });
             }
             catch (Exception ex)
             {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
             }
         }
 
-        public async Task<ResponseDTO> GetUserById(Guid userId)
+        //Access Only Admin
+        public async Task<ResponseDTO> CreateRole(RoleRequest role)
         {
             try
             {
-                // Retrieve user by ID
-                var user = await _userRepository.GetUserById(userId);
-                if (user == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "User not found."
-                    };
-                }
-
-                // Retrieve user's role
-                var role = await _userRepository.GetRoleById(user.RoleID);
-                if (role == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "User's role not found."
-                    };
-                }
-
-                // Map user and role to UserDTO
-                var userDTO = new UserDTO
-                {
-                    UserID = user.UserID,
-                    Email = user.Email,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    RoleName = role.RoleName
-                };
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "User retrieved successfully.",
-                    Data = userDTO
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> GetUserByEmail(string email, string userId)
-        {
-            try
-            {
-                // Retrieve user by email
-                var user = await _userRepository.GetUserByEmail(email);
-                if (user == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "User not found."
-                    };
-                }
-
-                // Parse userId to Guid
-                if (!Guid.TryParse(userId, out var userGuid))
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Invalid user ID format."
-                    };
-                }
-
-                // Check if the provided userId matches the user's ID
-                if (user.UserID != userGuid)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "You are not authorized to view this user's details."
-                    };
-                }
-
-                // Retrieve user's role
-                var role = await _userRepository.GetRoleById(user.RoleID);
-                if (role == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role not found for the user."
-                    };
-                }
-
-                // Map user and role to UserDTO
-                var userDTO = new UserDTO
-                {
-                    UserID = user.UserID,
-                    Email = user.Email,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    RoleName = role.RoleName
-                };
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "User retrieved successfully.",
-                    Data = userDTO
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
-            }
-        }
-
-
-        public async Task<ResponseDTO> CreateRole(RoleDTO roleDTO)
-        {
-            try
-            {
-                // Check if the role already exists
-                var existingRole = await _userRepository.GetRoleByName(roleDTO.RoleName);
+                var existingRole = await _userRepository.GetRoleByName(role.RoleName);
                 if (existingRole != null)
                 {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role already exists."
-                    };
+                    return new ResponseDTO(false, "Role already exists.");
                 }
 
                 // Create the new role
                 var newRole = new Role
                 {
-                    RoleName = roleDTO.RoleName,
-                    RoleDescription = roleDTO.RoleDescription
-                };
-
-                await _userRepository.CreateRole(newRole);
-
-                // Prepare the response with the created role information
-                var createdRoleDTO = new RoleDTO
-                {
-                    RoleID = newRole.RoleID,
-                    RoleName = newRole.RoleName,
-                    RoleDescription = newRole.RoleDescription
-                };
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Role successfully created.",
-                    Data = createdRoleDTO
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> GetRoleByName(string roleName)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(roleName))
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role name cannot be null or empty."
-                    };
-                }
-
-                var existingRole = await _userRepository.GetRoleByName(roleName);
-
-                if (existingRole == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role not found."
-                    };
-                }
-
-                var roleDTO = new RoleDTO
-                {
-                    RoleID = existingRole.RoleID,
-                    RoleName = existingRole.RoleName,
-                    RoleDescription = existingRole.RoleDescription
-                };
-
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Role retrieved successfully.",
-                    Data = roleDTO
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> GetRoleById(Guid roleId)
-        {
-            try
-            {
-                if (roleId == Guid.Empty)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Invalid role ID."
-                    };
-                }
-
-                var role = await _userRepository.GetRoleById(roleId);
-
-                if (role == null)
-                {
-                    return new ResponseDTO
-                    {
-                        Success = false,
-                        Message = "Role not found."
-                    };
-                }
-
-                var roleDTO = new RoleDTO
-                {
-                    RoleID = role.RoleID,
                     RoleName = role.RoleName,
                     RoleDescription = role.RoleDescription
                 };
 
-                return new ResponseDTO
-                {
-                    Success = true,
-                    Message = "Role retrieved successfully.",
-                    Data = roleDTO
-                };
+                var response = await _userRepository.CreateRole(newRole);
+                var roleDTO = new RoleDTO(response);
+
+                return new ResponseDTO(true, "Role successfully created.", roleDTO);
             }
             catch (Exception ex)
             {
-                return new ResponseDTO
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
+        //Access Only Admin
+        public async Task<ResponseDTO> UpdateRole(RoleRequest role)
+        {
+            try
+            {
+                var existingRole = await _userRepository.GetRoleByName(role.RoleName);
+                if (existingRole == null)
                 {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                };
+                    return new ResponseDTO(false, "Role not found.");
+                }
+
+                existingRole.RoleName = role.RoleName;
+                existingRole.RoleDescription = role.RoleDescription;
+
+                var updatedRole = await _userRepository.UpdateRole(existingRole.RoleID, existingRole);
+
+                if (updatedRole != null)
+                {
+                    var roleDTO = new RoleDTO(updatedRole);
+                    return new ResponseDTO(true, "Role successfully updated.", updatedRole);
+                }
+                else
+                {
+                    return new ResponseDTO(false, "Failed to update the role.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
             }
         }
 

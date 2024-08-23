@@ -35,7 +35,7 @@ namespace IOT.Entities.Models
         public Guid? CustomerID { get; set; }
 
         [Required]
-        [StringLength(500, MinimumLength = 6)]
+        [StringLength(30, MinimumLength = 6)]
         public string Password { get; set; }
 
         public bool EmailVerified { get; set; }

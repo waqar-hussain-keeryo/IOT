@@ -1,39 +1,36 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
 using System.ComponentModel.DataAnnotations;
+using IOT.Entities.Models;
 
 namespace IOT.Entities.DTO
 {
     public class UserDTO
     {
-        [BsonElement("UserID")]
-        [BsonRepresentation(BsonType.String)]
-        [Required]
-        public Guid UserID { get; set; } = Guid.NewGuid();
+        public UserDTO() { }
 
-        [Required]
-        [EmailAddress]
+        public UserDTO(Users user)
+        {
+            UserID = user.UserID;
+            Email = user.Email;
+            FirstName = user.FirstName;
+            LastName = user.LastName;
+            RoleID = user.RoleID;
+            CustomerID = user.CustomerID;
+            Password = user.Password;
+            EmailVerified = user.EmailVerified;
+        }
+
+        public Guid UserID { get; set; }
         public string Email { get; set; }
-
-        [Required]
-        [StringLength(50, MinimumLength = 2)]
         public string FirstName { get; set; }
-
-        [Required]
-        [StringLength(50, MinimumLength = 2)]
         public string LastName { get; set; }
-
-        [Required]
-        [StringLength(100)]
-        public string RoleName { get; set; }
-
-        [BsonRepresentation(BsonType.String)]
+        public Guid RoleID { get; set; }
+        public string? RoleName { get; set; }
         public Guid? CustomerID { get; set; }
-
-        [Required]
-        [StringLength(500, MinimumLength = 6)]
+        public string? CustomerName { get; set; }
         public string Password { get; set; }
-
         public bool EmailVerified { get; set; }
+        public object? Token { get; set; }
     }
 }

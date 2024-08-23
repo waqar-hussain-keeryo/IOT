@@ -1,6 +1,8 @@
 ﻿using IOT.Business.Interfaces;
 using IOT.Business.Services;
 using IOT.Entities.DTO;
+using IOT.Entities.Models;
+using IOT.Entities.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,115 +21,94 @@ namespace IOT.Api.Controllers
             _userService = userService;
         }
 
-        [HttpPost("RegisterAdmin")]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterAdmin([FromBody] UserDTO user)
+        [HttpPost("RegisterAdmin")]
+        public async Task<IActionResult> RegisterAdmin([FromBody] UserRequest user)
         {
-            if (user == null)
-            {
-                return BadRequest(new ApiResponse
-                {
-                    Success = false,
-                    Message = "Admin data is required."
-                });
-            }
-
             try
             {
+                if (user == null)
+                {
+                    return BadRequest(new ApiResponse(false, "Admin data is required."));
+                }
+
                 var response = await _globalAdminService.RegisterGlobalAdmin(user);
 
                 return response.Success
-                    ? Ok(new ApiResponse
-                    {
-                        Success = true,
-                        Message = response.Message,
-                        Data = response.Data
-                    })
-                    : BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = response.Message
-                    });
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred."
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 
         [HttpGet("GetAllUsers")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllUsers()
+        public async Task<IActionResult> GetAllUsers(PaginationRequest request)
         {
             try
             {
-                var response = await _userService.GetAllUsers();
+                var response = await _userService.GetAllUsers(request);
 
                 return response.Success
-                    ? Ok(new ApiResponse
-                    {
-                        Success = true,
-                        Message = response.Message ?? "Users retrieved successfully.",
-                        Data = response.Data
-                    })
-                    : BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = response.Message
-                    });
+                    ? Ok(new ApiResponse(true, response.Message ?? "Users retrieved successfully.", response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
-                {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPost("CreateRole")]
-        public async Task<IActionResult> CreateRole([FromBody] RoleDTO role)
+        public async Task<IActionResult> CreateRole([FromBody] RoleRequest role)
         {
             try
             {
                 if (role == null)
                 {
-                    return BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "Role object is null."
-                    });
+                    return BadRequest(new ApiResponse(false, "Role object is null."));
                 }
 
-                // Call the service method to create the role
                 var response = await _userService.CreateRole(role);
 
                 return response.Success
-                    ? Ok(new ApiResponse
-                    {
-                        Success = true,
-                        Message = response.Message,
-                        Data = response.Data
-                    })
-                    : BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = response.Message
-                    });
+                   ? Ok(new ApiResponse(true, response.Message, response.Data))
+                   : BadRequest(new ApiResponse(false, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("UpdateRole")]
+        public async Task<IActionResult> UpdateRole([FromBody] RoleRequest role)
+        {
+            try
+            {
+                if (role == null)
                 {
-                    Success = false,
-                    Message = "An unexpected error occurred: " + ex.Message
-                });
+                    return BadRequest(new ApiResponse(false, "Invalid role object."));
+                }
+
+                var response = await _userService.UpdateRole(role);
+
+                return response.Success
+                   ? Ok(new ApiResponse(true, response.Message, response.Data))
+                   : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
 

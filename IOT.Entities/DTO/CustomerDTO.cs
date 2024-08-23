@@ -1,55 +1,26 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson;
-using System.ComponentModel.DataAnnotations;
+﻿using MongoDB.Bson;
 
 namespace IOT.Entities.DTO
 {
     public class CustomerDTO
     {
-        [BsonElement("CustomerID")]
-        [BsonRepresentation(BsonType.String)]
-        [Required]
-        public Guid CustomerID { get; set; } = Guid.NewGuid();
-
-        [Required]
-        [StringLength(100)]
+        public Guid CustomerID { get; set; }
         public string CustomerName { get; set; }
-
-        [Phone]
         public string CustomerPhone { get; set; }
-
-        [Required]
-        [EmailAddress]
         public string CustomerEmail { get; set; }
-
-        [Required]
-        [StringLength(100)]
         public string CustomerCity { get; set; }
-
-        [Required]
         public string CustomerRegion { get; set; }
-
         public bool IsActive { get; set; }
-
         public List<Site> Sites { get; set; } = new List<Site>();
-
         public List<string> CustomerUsers { get; set; } = new List<string>();
-
         public List<DigitalService> DigitalServices { get; set; } = new List<DigitalService>();
     }
 
     public class Site
     {
-        [Required]
-        [StringLength(100)]
         public string SiteName { get; set; }
-
-        [Required]
-        [StringLength(200)]
         public string SiteLocation { get; set; }
-
         public double Latitude { get; set; }
-
         public double Longitude { get; set; }
 
         public List<Device> Devices { get; set; } = new List<Device>();
@@ -57,32 +28,18 @@ namespace IOT.Entities.DTO
 
     public class Device
     {
-        [Required]
         public ObjectId DeviceID { get; set; }
-
-        [Required]
-        [StringLength(100)]
         public string DeviceName { get; set; }
-
-        [Required]
         public string ProductType { get; set; }
-
         public double ThreSholdValue { get; set; }
     }
 
     public class DigitalService
     {
-        [Required]
         public ObjectId DigitalServiceID { get; set; }
-
-        [Required]
         public DateTime ServiceStartDate { get; set; }
-
-        [Required]
         public DateTime ServiceEndDate { get; set; }
-
         public bool IsActive { get; set; }
-
         public List<string> NotificationUsers { get; set; } = new List<string>();
     }
 }
