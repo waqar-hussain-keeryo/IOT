@@ -7,3 +7,7 @@
 /IOT.Business/obj
 /IOT.Data/obj
 /IOT.Entities/obj
+/IOT.API/bin
+/IOT.Business/bin
+/IOT.Data/bin
+/IOT.Entities/bin
