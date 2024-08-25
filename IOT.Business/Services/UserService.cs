@@ -42,90 +42,127 @@ namespace IOT.Business.Services
         }
 
         //Access All Users
-        public async Task<ResponseDTO> RegisterUser(UserRequest user, string customerId)
+        public async Task<ResponseDTO> RegisterUser(UserRequest request, string currentRole, string userId)
         {
             try
             {
-                if (user.RoleName == "Admin")
+                if (request.RoleName == "Admin" || request.RoleName == "Customer")
                 {
-                    return new ResponseDTO(false, "Admin role cannot be registered by this method. Please contact your administrator.");
+                    return new ResponseDTO(false, "Admin or Customer cannot be registered. Please contact your administrator.");
                 }
 
-                var existingUser = await _userRepository.GetUserByEmail(user.Email);
+                var existingUser = await _userRepository.GetUserByEmail(request.Email);
                 if (existingUser != null)
                 {
                     return new ResponseDTO(false, "User already registered.");
                 }
 
-                var role = await _userRepository.GetRoleByName(user.RoleName);
+                var role = await _userRepository.GetRoleByName(request.RoleName);
                 if (role == null)
                 {
                     return new ResponseDTO(false, "Role does not exist.");
                 }
 
-                // Convert customerId from string to Guid
-                Guid? customerGuid = null;
-                if (!string.IsNullOrWhiteSpace(customerId))
+                // Parse customerId to Guid
+                var customerId = CommonMethods.ValidateGuid(userId);
+                if (customerId == Guid.Empty)
                 {
-                    var parsedGuid = CommonMethods.ValidateGuid(customerId);
-                    if (customerGuid == Guid.Empty)
-                    {
-                        return new ResponseDTO(false, "Invalid user ID format.");
-                    }
-                    else
-                    {
-                        customerGuid = parsedGuid;
-                    }
+                    return new ResponseDTO(false, "Invalid user ID format.");
                 }
 
                 // Create the new user
                 var newUser = new Users
                 {
-                    Email = user.Email,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Password = BCrypt.Net.BCrypt.HashPassword(user.Password),
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     RoleID = role.RoleID,
-                    CustomerID = user.RoleName == "User" ? customerGuid : null,
+                    CustomerID = currentRole == "Customer" ? customerId : null,
                 };
 
                 var userResponse = await _userRepository.CreateUser(newUser);
-                var token = _jwtTokenGenerator.GenerateToken(newUser, user.RoleName);
-                var loginResponse = new LoginResponseDTO(user.Email, role.RoleName, token);
+                var token = _jwtTokenGenerator.GenerateToken(newUser, request.RoleName);
+                var responseDTO = new UserDTO(userResponse);
+                responseDTO.Token = token;
+                
+                return new ResponseDTO(true, "User registered successfully.", responseDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
 
-                var responseData = new
+        //Access All Users
+        public async Task<ResponseDTO> UpdateUser(string email, UserRequest request, string roleName)
+        {
+            try
+            {
+                var currentUser = await _userRepository.GetUserByEmail(email);
+                if (currentUser == null)
                 {
-                    RegisteredUser = loginResponse,
-                    DemoUser = ""
-                };
-
-                // Add demo user if a customer was registered
-                if (user.RoleName == "Customer")
-                {
-                    var userRole = await _userRepository.GetRoleByName("User");
-                    if (userRole != null)
-                    {
-                        var demoUser = new Users
-                        {
-                            Email = $"demoUser_{user.Email}",
-                            FirstName = "Demo",
-                            LastName = "User",
-                            Password = BCrypt.Net.BCrypt.HashPassword("Demo123!"),
-                            RoleID = userRole.RoleID,
-                            CustomerID = userResponse.UserID
-                        };
-
-                        var response = await _userRepository.CreateUser(demoUser);
-
-                        responseData = new
-                        {
-                            RegisteredUser = loginResponse,
-                            DemoUser = response.Email
-                        };
-                    }  
+                    return new ResponseDTO(false, "User not found.");
                 }
 
-                return new ResponseDTO(true, "User registered successfully." + (responseData.DemoUser != null ? " Demo user created successfully." : string.Empty), responseData);
+                // Authorization logic
+                if (roleName == "Admin")
+                {
+                    var roleId = await _userRepository.GetRoleByName(request.RoleName);
+
+                    currentUser.Email = request.Email;
+                    currentUser.FirstName = request.FirstName;
+                    currentUser.LastName = request.LastName;
+                    currentUser.RoleID = roleId.RoleID;
+                    currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                    currentUser.EmailVerified = request.EmailVerified;
+
+                    var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                    var responseDTO = new UserDTO(updateResponse);
+                    return new ResponseDTO(true, "User successfully updated.", responseDTO);
+                }
+                else if (roleName == "Customer")
+                {
+                    if (request.RoleName != "Admin")
+                    {
+                        currentUser.Email = request.Email;
+                        currentUser.FirstName = request.FirstName;
+                        currentUser.LastName = request.LastName;
+                        currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                        currentUser.EmailVerified = request.EmailVerified;
+
+                        var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                        var responseDTO = new UserDTO(updateResponse);
+                        return new ResponseDTO(true, "User successfully updated.", responseDTO);
+                    }
+                    else
+                    {
+                        return new ResponseDTO(false, "You are not authorized to update admin account.", null);
+                    }
+                }
+                else if (roleName == "User")
+                {
+                    if (request.RoleName != "Admin" && request.RoleName != "Customer")
+                    {
+                        currentUser.Email = request.Email;
+                        currentUser.FirstName = request.FirstName;
+                        currentUser.LastName = request.LastName;
+                        currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                        currentUser.EmailVerified = request.EmailVerified;
+
+                        var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                        var responseDTO = new UserDTO(updateResponse);
+                        return new ResponseDTO(true, "User successfully updated.", responseDTO);
+                    }
+                    else
+                    {
+                        return new ResponseDTO(false, "You are not authorized to update admin or customer account.", null);
+                    }
+                }
+                else
+                {
+                    return new ResponseDTO(false, "Unauthorized role.");
+                }
             }
             catch (Exception ex)
             {
@@ -279,11 +316,11 @@ namespace IOT.Business.Services
         }
 
         //Access Only Admin
-        public async Task<ResponseDTO> UpdateRole(RoleRequest role)
+        public async Task<ResponseDTO> UpdateRole(string roleName, RoleRequest role)
         {
             try
             {
-                var existingRole = await _userRepository.GetRoleByName(role.RoleName);
+                var existingRole = await _userRepository.GetRoleByName(roleName);
                 if (existingRole == null)
                 {
                     return new ResponseDTO(false, "Role not found.");

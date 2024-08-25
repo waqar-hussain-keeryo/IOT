@@ -32,7 +32,7 @@ namespace IOT.Api.Controllers
                     return BadRequest(new ApiResponse(false, "Admin data is required."));
                 }
 
-                var response = await _globalAdminService.RegisterGlobalAdmin(user);
+                var response = await _globalAdminService.RegisterAdmin(user);
 
                 return response.Success
                     ? Ok(new ApiResponse(true, response.Message, response.Data))
@@ -45,8 +45,32 @@ namespace IOT.Api.Controllers
             }
         }
 
-        [HttpGet("GetAllUsers")]
         [Authorize(Roles = "Admin")]
+        [HttpPost("RegisterCustomer")]
+        public async Task<IActionResult> RegisterCustomer([FromBody] UserRequest user)
+        {
+            try
+            {
+                if (user == null)
+                {
+                    return BadRequest(new ApiResponse(false, "Customer data is required."));
+                }
+
+                var response = await _globalAdminService.RegisterCustomer(user);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("GetAllUsers")]
         public async Task<IActionResult> GetAllUsers(PaginationRequest request)
         {
             try
@@ -90,7 +114,7 @@ namespace IOT.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("UpdateRole")]
-        public async Task<IActionResult> UpdateRole([FromBody] RoleRequest role)
+        public async Task<IActionResult> UpdateRole(string roleName, [FromBody] RoleRequest role)
         {
             try
             {
@@ -99,7 +123,7 @@ namespace IOT.Api.Controllers
                     return BadRequest(new ApiResponse(false, "Invalid role object."));
                 }
 
-                var response = await _userService.UpdateRole(role);
+                var response = await _userService.UpdateRole(roleName, role);
 
                 return response.Success
                    ? Ok(new ApiResponse(true, response.Message, response.Data))

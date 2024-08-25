@@ -6,6 +6,7 @@ namespace IOT.Business.Interfaces
 {
     public interface IGlobalAdminService
     {
-        Task<ResponseDTO> RegisterGlobalAdmin(UserRequest user);
+        Task<ResponseDTO> RegisterAdmin(UserRequest user);
+        Task<ResponseDTO> RegisterCustomer(UserRequest user);
     }
 }

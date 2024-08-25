@@ -44,12 +44,13 @@ namespace IOT.Api.Controllers
 
         [Authorize(Roles = "Admin,Customer")]
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] UserRequest user)
+        public async Task<IActionResult> Register([FromBody] UserRequest request)
         {
             try
             {
+                var currentRole = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
                 var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var response = await _userService.RegisterUser(user, userId);
+                var response = await _userService.RegisterUser(request, currentRole, userId);
 
                 return response.Success
                   ? Ok(new ApiResponse(true, response.Message, response.Data))
@@ -109,5 +110,31 @@ namespace IOT.Api.Controllers
                    new ApiResponse(false, "An unexpected error occurred." + ex.Message));
             }
         }
+
+        [Authorize]
+        [HttpPut("UpdateUser")]
+        public async Task<IActionResult> UpdateUser(string email, [FromBody] UserRequest userRequest)
+        {
+            try
+            {
+                if (userRequest == null)
+                {
+                    return BadRequest(new ApiResponse(false, "User input cannot be null."));
+                }
+
+                var currentRoleName = User.FindFirst(ClaimTypes.Role)?.Value;
+                var response = await _userService.UpdateUser(email, userRequest, currentRoleName);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred: " + ex.Message));
+            }
+        }
+
     }
 }
