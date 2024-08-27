@@ -18,7 +18,7 @@ namespace IOT.Entities.Models
         [Required]
         [StringLength(100)]
         public string RoleName { get; set; }
-
         public string RoleDescription { get; set; }
+        public bool IsDeleted { get; set; } = false;
     }
 }

@@ -37,7 +37,7 @@ namespace IOT.Entities.Models
         [Required]
         [StringLength(30, MinimumLength = 6)]
         public string Password { get; set; }
-
-        public bool EmailVerified { get; set; }
+        public bool EmailVerified { get; set; } = false;
+        public bool IsDeleted { get; set; } = false;
     }
 }

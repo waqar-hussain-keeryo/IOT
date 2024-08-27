@@ -18,7 +18,6 @@ namespace IOT.Business.Services
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
-        //Access All Users
         public async Task<ResponseDTO> Login(LoginRequest request)
         {
             try
@@ -41,14 +40,13 @@ namespace IOT.Business.Services
             }
         }
 
-        //Access All Users
-        public async Task<ResponseDTO> RegisterUser(UserRequest request, string currentRole, string userId)
+        public async Task<ResponseDTO> CreateUser(string userId, string roleName, UserRequest request)
         {
             try
             {
-                if (request.RoleName == "Admin" || request.RoleName == "Customer")
+                if (roleName == "User" || request.RoleName != "User")
                 {
-                    return new ResponseDTO(false, "Admin or Customer cannot be registered. Please contact your administrator.");
+                    return new ResponseDTO(false, "You are not authorized to register account. Please contact your administrator.");
                 }
 
                 var existingUser = await _userRepository.GetUserByEmail(request.Email);
@@ -63,22 +61,17 @@ namespace IOT.Business.Services
                     return new ResponseDTO(false, "Role does not exist.");
                 }
 
-                // Parse customerId to Guid
                 var customerId = CommonMethods.ValidateGuid(userId);
-                if (customerId == Guid.Empty)
-                {
-                    return new ResponseDTO(false, "Invalid user ID format.");
-                }
 
                 // Create the new user
                 var newUser = new Users
                 {
-                    Email = request.Email,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
+                    Email = request.Email,
                     Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     RoleID = role.RoleID,
-                    CustomerID = currentRole == "Customer" ? customerId : null,
+                    CustomerID = roleName == "Customer" ? customerId : null,
                 };
 
                 var userResponse = await _userRepository.CreateUser(newUser);
@@ -86,7 +79,7 @@ namespace IOT.Business.Services
                 var responseDTO = new UserDTO(userResponse);
                 responseDTO.Token = token;
                 
-                return new ResponseDTO(true, "User registered successfully.", responseDTO);
+                return new ResponseDTO(true, "User successfully registered.", responseDTO);
             }
             catch (Exception ex)
             {
@@ -94,75 +87,32 @@ namespace IOT.Business.Services
             }
         }
 
-        //Access All Users
-        public async Task<ResponseDTO> UpdateUser(string email, UserRequest request, string roleName)
+        public async Task<ResponseDTO> UpdateUser(Guid userId, string roleName, UserRequest request)
         {
             try
             {
-                var currentUser = await _userRepository.GetUserByEmail(email);
+                if (roleName == "User" || request.RoleName != "User")
+                {
+                    return new ResponseDTO(false, "You are not authorized to register account. Please contact your administrator.");
+                }
+
+                var currentUser = await _userRepository.GetUserById(userId);
                 if (currentUser == null)
                 {
                     return new ResponseDTO(false, "User not found.");
                 }
 
-                // Authorization logic
-                if (roleName == "Admin")
-                {
-                    var roleId = await _userRepository.GetRoleByName(request.RoleName);
+                var roleId = await _userRepository.GetRoleByName(request.RoleName);
 
-                    currentUser.Email = request.Email;
-                    currentUser.FirstName = request.FirstName;
-                    currentUser.LastName = request.LastName;
-                    currentUser.RoleID = roleId.RoleID;
-                    currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                    currentUser.EmailVerified = request.EmailVerified;
+                currentUser.FirstName = request.FirstName;
+                currentUser.LastName = request.LastName;
+                currentUser.Email = request.Email;
+                currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                currentUser.RoleID = roleId.RoleID;
 
-                    var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
-                    var responseDTO = new UserDTO(updateResponse);
-                    return new ResponseDTO(true, "User successfully updated.", responseDTO);
-                }
-                else if (roleName == "Customer")
-                {
-                    if (request.RoleName != "Admin")
-                    {
-                        currentUser.Email = request.Email;
-                        currentUser.FirstName = request.FirstName;
-                        currentUser.LastName = request.LastName;
-                        currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                        currentUser.EmailVerified = request.EmailVerified;
-
-                        var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
-                        var responseDTO = new UserDTO(updateResponse);
-                        return new ResponseDTO(true, "User successfully updated.", responseDTO);
-                    }
-                    else
-                    {
-                        return new ResponseDTO(false, "You are not authorized to update admin account.", null);
-                    }
-                }
-                else if (roleName == "User")
-                {
-                    if (request.RoleName != "Admin" && request.RoleName != "Customer")
-                    {
-                        currentUser.Email = request.Email;
-                        currentUser.FirstName = request.FirstName;
-                        currentUser.LastName = request.LastName;
-                        currentUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                        currentUser.EmailVerified = request.EmailVerified;
-
-                        var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
-                        var responseDTO = new UserDTO(updateResponse);
-                        return new ResponseDTO(true, "User successfully updated.", responseDTO);
-                    }
-                    else
-                    {
-                        return new ResponseDTO(false, "You are not authorized to update admin or customer account.", null);
-                    }
-                }
-                else
-                {
-                    return new ResponseDTO(false, "Unauthorized role.");
-                }
+                var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                var responseDTO = new UserDTO(updateResponse);
+                return new ResponseDTO(true, "User successfully updated.", responseDTO);
             }
             catch (Exception ex)
             {
@@ -170,7 +120,60 @@ namespace IOT.Business.Services
             }
         }
 
-        //Access All Users
+        public async Task<ResponseDTO> DeleteUser(Guid userId, string roleName)
+        {
+            try
+            {
+                if (roleName == "User")
+                {
+                    return new ResponseDTO(false, "You are not authorized.");
+                }
+
+                var currentUser = await _userRepository.GetUserById(userId);
+                if (currentUser == null)
+                {
+                    return new ResponseDTO(false, "User not found.");
+                }
+
+                currentUser.IsDeleted = true;
+
+                var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                var responseDTO = new UserDTO(updateResponse);
+                return new ResponseDTO(true, "User successfully deleted.", responseDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
+        public async Task<ResponseDTO> VerifyUser(Guid userId, string roleName)
+        {
+            try
+            {
+                if (roleName == "User")
+                {
+                    return new ResponseDTO(false, "You are not authorized.");
+                }
+
+                var currentUser = await _userRepository.GetUserById(userId);
+                if (currentUser == null)
+                {
+                    return new ResponseDTO(false, "User not found.");
+                }
+
+                currentUser.EmailVerified = true;
+
+                var updateResponse = await _userRepository.UpdateUser(currentUser.UserID, currentUser);
+                var responseDTO = new UserDTO(updateResponse);
+                return new ResponseDTO(true, "User successfully verified.", responseDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
         public async Task<ResponseDTO> GetUserByEmail(string email)
         {
             try
@@ -185,10 +188,12 @@ namespace IOT.Business.Services
                 var userDTO = new UserDTO
                 {
                     UserID = user.UserID,
-                    Email = user.Email,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
-                    RoleName = role.RoleName
+                    Email = user.Email,
+                    Password = user.Password,
+                    RoleName = role.RoleName,
+                    EmailVerified = user.EmailVerified
                 };
 
                 return new ResponseDTO(true, "User retrieved successfully.", userDTO);
@@ -199,11 +204,15 @@ namespace IOT.Business.Services
             }
         }
 
-        //Access Only Customer
-        public async Task<ResponseDTO> GetAllUsersByCustomerId(string customerId, PaginationRequest request)
+        public async Task<ResponseDTO> GetAllUsersByCustomerId(string customerId, string roleName, PaginationRequest request)
         {
             try
             {
+                if (roleName == "User")
+                {
+                    return new ResponseDTO(false, "You are not authorized.");
+                }
+
                 if (string.IsNullOrWhiteSpace(customerId))
                 {
                     return new ResponseDTO(false, "Customer ID cannot be null or empty.");
@@ -211,22 +220,17 @@ namespace IOT.Business.Services
 
                 // Parse customerId to Guid
                 var customerGuid = CommonMethods.ValidateGuid(customerId);
-                if (customerGuid == Guid.Empty)
-                {
-                    return new ResponseDTO(false, "Invalid user ID format.");
-                }
-
                 var (users, totalRecords) = await _userRepository.GetAllUsersByCustomerId(customerGuid, request);
 
                 var userDTOs = users.Select(u => new UserDTO
                 {
                     UserID = u.UserID,
-                    Email = u.Email,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
+                    Email = u.Email,
+                    Password = u.Password,
                     RoleID = u.RoleID,
                     CustomerID = customerGuid,
-                    Password = u.Password,
                     EmailVerified = u.EmailVerified
                 }).ToList();
 
@@ -244,108 +248,5 @@ namespace IOT.Business.Services
                 return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
             }
         }
-
-        //Access Only Admin
-        public async Task<ResponseDTO> GetAllUsers(PaginationRequest request)
-        {
-            try
-            {
-                var (users, totalRecords) = await _userRepository.GetAllUsers(request);
-                var userDTOs = users.Select(async u =>
-                {
-                    var role = await _userRepository.GetRoleById(u.RoleID);
-                    return new UserDTO
-                    {
-                        UserID = u.UserID,
-                        Email = u.Email,
-                        FirstName = u.FirstName,
-                        LastName = u.LastName,
-                        RoleID = role.RoleID,
-                        RoleName = role.RoleName,
-                        CustomerID = u.CustomerID,
-                        Password = u.Password,
-                        EmailVerified = u.EmailVerified
-                    };
-                }).ToList();
-
-                // Wait for all userDTO tasks to complete
-                var userList = await Task.WhenAll(userDTOs);
-
-                return new ResponseDTO(true, "Users retrieved successfully.",
-                    new
-                    {
-                        Users = userList,
-                        TotalRecords = totalRecords,
-                        PageNumber = request.PageNumber,
-                        PageSize = request.PageSize
-                    });
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
-            }
-        }
-
-        //Access Only Admin
-        public async Task<ResponseDTO> CreateRole(RoleRequest role)
-        {
-            try
-            {
-                var existingRole = await _userRepository.GetRoleByName(role.RoleName);
-                if (existingRole != null)
-                {
-                    return new ResponseDTO(false, "Role already exists.");
-                }
-
-                // Create the new role
-                var newRole = new Role
-                {
-                    RoleName = role.RoleName,
-                    RoleDescription = role.RoleDescription
-                };
-
-                var response = await _userRepository.CreateRole(newRole);
-                var roleDTO = new RoleDTO(response);
-
-                return new ResponseDTO(true, "Role successfully created.", roleDTO);
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
-            }
-        }
-
-        //Access Only Admin
-        public async Task<ResponseDTO> UpdateRole(string roleName, RoleRequest role)
-        {
-            try
-            {
-                var existingRole = await _userRepository.GetRoleByName(roleName);
-                if (existingRole == null)
-                {
-                    return new ResponseDTO(false, "Role not found.");
-                }
-
-                existingRole.RoleName = role.RoleName;
-                existingRole.RoleDescription = role.RoleDescription;
-
-                var updatedRole = await _userRepository.UpdateRole(existingRole.RoleID, existingRole);
-
-                if (updatedRole != null)
-                {
-                    var roleDTO = new RoleDTO(updatedRole);
-                    return new ResponseDTO(true, "Role successfully updated.", updatedRole);
-                }
-                else
-                {
-                    return new ResponseDTO(false, "Failed to update the role.");
-                }
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
-            }
-        }
-
     }
 }

@@ -50,7 +50,7 @@ namespace IOT.Api.Controllers
             {
                 var currentRole = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
                 var userId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var response = await _userService.RegisterUser(request, currentRole, userId);
+                var response = await _userService.CreateUser(userId, currentRole, request);
 
                 return response.Success
                   ? Ok(new ApiResponse(true, response.Message, response.Data))
@@ -74,7 +74,8 @@ namespace IOT.Api.Controllers
             try
             {
                 var customerId = _httpContextAccessor.HttpContext.User.FindFirstValue("userId");
-                var response = await _userService.GetAllUsersByCustomerId(customerId, request);
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _userService.GetAllUsersByCustomerId(customerId, roleName, request);
 
                 return response.Success
                   ? Ok(new ApiResponse(true, response.Message, response.Data))
@@ -113,7 +114,7 @@ namespace IOT.Api.Controllers
 
         [Authorize]
         [HttpPut("UpdateUser")]
-        public async Task<IActionResult> UpdateUser(string email, [FromBody] UserRequest userRequest)
+        public async Task<IActionResult> UpdateUser(Guid userId, [FromBody] UserRequest userRequest)
         {
             try
             {
@@ -123,7 +124,7 @@ namespace IOT.Api.Controllers
                 }
 
                 var currentRoleName = User.FindFirst(ClaimTypes.Role)?.Value;
-                var response = await _userService.UpdateUser(email, userRequest, currentRoleName);
+                var response = await _userService.UpdateUser(userId, currentRoleName, userRequest);
 
                 return response.Success
                     ? Ok(new ApiResponse(true, response.Message, response.Data))

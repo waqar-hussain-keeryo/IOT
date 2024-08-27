@@ -14,9 +14,11 @@ namespace IOT.Entities.DTO
             RoleID = role.RoleID;
             RoleName = role.RoleName;
             RoleDescription = role.RoleDescription;
+            IsDeleted = role.IsDeleted;
         }
         public Guid RoleID { get; set; }
         public string RoleName { get; set; }
         public string RoleDescription { get; set; }
+        public bool IsDeleted { get; set; }
     }
 }

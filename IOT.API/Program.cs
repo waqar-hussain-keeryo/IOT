@@ -17,11 +17,15 @@ builder.Services.AddSingleton<MongoDBContext>();
 // Register repositories
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<IProductTypeRepository, ProductTypeRepository>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Register services
 builder.Services.AddScoped<IGlobalAdminService, GlobalAdminService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IProductTypeService, ProductTypeService>();
 
 //Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");

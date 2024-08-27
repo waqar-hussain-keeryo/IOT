@@ -19,6 +19,7 @@ namespace IOT.Entities.DTO
             CustomerID = user.CustomerID;
             Password = user.Password;
             EmailVerified = user.EmailVerified;
+            IsDeleted = user.IsDeleted;
         }
 
         public Guid UserID { get; set; }
@@ -31,6 +32,7 @@ namespace IOT.Entities.DTO
         public string? CustomerName { get; set; }
         public string Password { get; set; }
         public bool EmailVerified { get; set; }
+        public bool IsDeleted { get; set; }
         public object? Token { get; set; }
     }
 }
