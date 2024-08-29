@@ -13,12 +13,14 @@ namespace IOT.Business.Interfaces
         Task<ResponseDTO> GetAllCustomers(string roleName, PaginationRequest request);
 
 
-        Task<ResponseDTO> CreateSites(string roleName, Guid customerId, SiteRequest request);
-        Task<ResponseDTO> UpdateSites(string roleName, Guid customerId, SiteRequest request);
+        Task<ResponseDTO> AddSites(string roleName, Guid customerId, SiteRequest request);
+        Task<ResponseDTO> UpdateSites(string roleName, Guid customerId, Guid siteId, SiteRequest request);
+        Task<ResponseDTO> AddDevices(string roleName, Guid customerId, Guid siteId, DeviceRequest request);
+        Task<ResponseDTO> UpdateDevices(string roleName, Guid customerId, Guid siteId, Guid deviceId, DeviceRequest request);
 
-        Task<ResponseDTO> AddDevices(string roleName, Guid customerId, DeviceRequest request);
-        Task<ResponseDTO> AddCustomerUsers(string roleName, Guid customerId, List<string> CustomerUsers);
-        Task<ResponseDTO> CreateDigitalServices(string roleName, Guid customerId, DigitalServiceRequest request);
-        Task<ResponseDTO> AddNotificationUsers(string roleName, Guid customerId, List<string> NotificationUsers);
+        Task<ResponseDTO> AddCustomerUsers(string roleName, Guid customerId, List<string> customerUsers);
+        Task<ResponseDTO> AddDigitalServices(string roleName, Guid customerId, DigitalServiceRequest request);
+        Task<ResponseDTO> UpdateDigitalServices(string roleName, Guid customerId, Guid digitalServiceId, DigitalServiceRequest request);
+        Task<ResponseDTO> AddNotificationUsers(string roleName, Guid customerId, Guid digitalServiceId, List<string> notificationUsers);
     }
 }

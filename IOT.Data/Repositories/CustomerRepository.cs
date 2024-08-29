@@ -14,8 +14,7 @@ namespace IOT.Data.Repositories
         Task<(IEnumerable<Customer> Customers, int TotalRecords)> GetAll(PaginationRequest request);
 
 
-        Task<Customer> CreateSite(Guid customerId, SiteRequest request);
-        Task<Customer> UpdateSite(Guid customerId, Guid siteId, SiteRequest request);
+        Task<Customer> AddSite(Guid customerId, Entities.Models.Site request);
     }
 
     public class CustomerRepository : ICustomerRepository
@@ -133,7 +132,7 @@ namespace IOT.Data.Repositories
 
         }
 
-        public async Task<Customer> CreateSite(Guid customerId, SiteRequest request)
+        public async Task<Customer> AddSite(Guid customerId, Entities.Models.Site request)
         {
             var filter = Builders<Customer>.Filter.Eq(c => c.CustomerID, customerId);
             var update = Builders<Customer>.Update.Push(c => c.Sites, new Entities.Models.Site
@@ -153,28 +152,5 @@ namespace IOT.Data.Repositories
 
             return null;
         }
-
-        public async Task<Customer> UpdateSite(Guid customerId, Guid siteId, SiteRequest request)
-        {
-            var filter = Builders<Customer>.Filter.And(
-                Builders<Customer>.Filter.Eq(c => c.CustomerID, customerId),
-                Builders<Customer>.Filter.ElemMatch(c => c.Sites, s => s.SiteID == siteId)
-            );
-
-            var update = Builders<Customer>.Update
-                .Set(c => c.Sites[-1].SiteName, request.SiteName)
-                .Set(c => c.Sites[-1].SiteLocation, request.SiteLocation)
-                .Set(c => c.Sites[-1].Latitude, request.Latitude)
-                .Set(c => c.Sites[-1].Longitude, request.Longitude);
-
-            var updateResult = await _dbContext.Customers.UpdateOneAsync(filter, update);
-            if (updateResult.ModifiedCount > 0)
-            {
-                return await _dbContext.Customers.Find(filter).FirstOrDefaultAsync();
-            }
-
-            return null;
-        }
-
     }
 }

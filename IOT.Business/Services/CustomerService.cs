@@ -195,7 +195,7 @@ namespace IOT.Business.Services
         }
 
 
-        public async Task<ResponseDTO> CreateSites(string roleName, Guid customerId, SiteRequest request)
+        public async Task<ResponseDTO> AddSites(string roleName, Guid customerId, SiteRequest request)
         {
             try
             {
@@ -215,7 +215,15 @@ namespace IOT.Business.Services
                     return new ResponseDTO(false, "Site data required.");
                 }
 
-                var customerResponse = await _customerRepository.CreateSite(existingCustomer.CustomerID, request);
+                existingCustomer.Sites.Add(new Entities.Models.Site()
+                {
+                    SiteName = request.SiteName,
+                    SiteLocation = request.SiteLocation,
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
+                });
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
                 var customerDTO = new CustomerDTO(customerResponse);
                 return new ResponseDTO(true, "Site successfully created.", customerDTO);
             }
@@ -225,7 +233,7 @@ namespace IOT.Business.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateSites(string roleName, Guid customerId, SiteRequest request)
+        public async Task<ResponseDTO> UpdateSites(string roleName, Guid customerId, Guid siteId, SiteRequest request)
         {
             try
             {
@@ -245,8 +253,18 @@ namespace IOT.Business.Services
                     return new ResponseDTO(false, "Site data required.");
                 }
 
-                var siteId = existingCustomer.Sites.FirstOrDefault().SiteID;
-                var customerResponse = await _customerRepository.UpdateSite(existingCustomer.CustomerID, siteId, request);
+                var site = existingCustomer.Sites.FirstOrDefault(s => s.SiteID == siteId);
+                if (site == null)
+                {
+                    return new ResponseDTO(false, "Site not found.");
+                }
+
+                site.SiteName = request.SiteName;
+                site.SiteLocation = request.SiteLocation;
+                site.Latitude = request.Latitude;
+                site.Longitude = request.Longitude;
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
                 var customerDTO = new CustomerDTO(customerResponse);
                 return new ResponseDTO(true, "Site successfully updated.", customerDTO);
             }
@@ -256,24 +274,246 @@ namespace IOT.Business.Services
             }
         }
 
-        public Task<ResponseDTO> AddDevices(string roleName, Guid customerId, DeviceRequest request)
+        public async Task<ResponseDTO> AddDevices(string roleName, Guid customerId, Guid siteId, DeviceRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                if (request == null)
+                {
+                    return new ResponseDTO(false, "Device data required.");
+                }
+
+                var site = existingCustomer.Sites.FirstOrDefault(s => s.SiteID == siteId);
+                if (site == null)
+                {
+                    return new ResponseDTO(false, "Site not found.");
+                }
+
+                site.Devices.Add(new Entities.Models.Device()
+                {
+                    DeviceName = request.DeviceName,
+                    ProductType = request.ProductType,
+                    ThreSholdValue = request.ThreSholdValue
+                });
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+                return new ResponseDTO(true, "Device successfully inserted.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
         }
 
-        public Task<ResponseDTO> AddCustomerUsers(string roleName, Guid customerId, List<string> CustomerUsers)
+        public async Task<ResponseDTO> UpdateDevices(string roleName, Guid customerId, Guid siteId, Guid deviceId, DeviceRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                if (request == null)
+                {
+                    return new ResponseDTO(false, "Device data required.");
+                }
+
+                var site = existingCustomer.Sites.FirstOrDefault(s => s.SiteID == siteId);
+                if (site == null)
+                {
+                    return new ResponseDTO(false, "Site not found.");
+                }
+
+                var device = site.Devices.FirstOrDefault(d => d.DeviceID == deviceId);
+                if (device == null)
+                {
+                    return new ResponseDTO(false, "Device not found.");
+                }
+
+                device.DeviceName = request.DeviceName;
+                device.ProductType = request.ProductType;
+                device.ThreSholdValue = request.ThreSholdValue;
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+
+                return new ResponseDTO(true, "Device successfully updated.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
         }
 
-        public Task<ResponseDTO> CreateDigitalServices(string roleName, Guid customerId, DigitalServiceRequest request)
+        public async Task<ResponseDTO> AddCustomerUsers(string roleName, Guid customerId, List<string> customerUsers)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                foreach (var user in customerUsers)
+                {
+                    if (!existingCustomer.CustomerUsers.Contains(user))
+                    {
+                        existingCustomer.CustomerUsers.Add(user);
+                    }
+                }
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+
+                return new ResponseDTO(true, "Customer users successfully added.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
         }
 
-        public Task<ResponseDTO> AddNotificationUsers(string roleName, Guid customerId, List<string> NotificationUsers)
+        public async Task<ResponseDTO> AddDigitalServices(string roleName, Guid customerId, DigitalServiceRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                if (request == null)
+                {
+                    return new ResponseDTO(false, "Digital Service data required.");
+                }
+
+                existingCustomer.DigitalServices.Add(new Entities.Models.DigitalService()
+                {
+                    ServiceStartDate = request.ServiceStartDate,
+                    ServiceEndDate = request.ServiceEndDate,
+                    IsActive = request.IsActive
+                });
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+                return new ResponseDTO(true, "Digital Service successfully created.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
         }
+
+        public async Task<ResponseDTO> UpdateDigitalServices(string roleName, Guid customerId, Guid digitalServiceId, DigitalServiceRequest request)
+        {
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                if (request == null)
+                {
+                    return new ResponseDTO(false, "Digital Service data required.");
+                }
+
+                var digitalService = existingCustomer.DigitalServices.FirstOrDefault(s => s.DigitalServiceID == digitalServiceId);
+                if (digitalService == null)
+                {
+                    return new ResponseDTO(false, "Digital Service not found.");
+                }
+
+                digitalService.ServiceStartDate = request.ServiceStartDate;
+                digitalService.ServiceEndDate = request.ServiceEndDate;
+                digitalService.IsActive = request.IsActive;
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+                return new ResponseDTO(true, "Digital Service successfully updated.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
+        public async Task<ResponseDTO> AddNotificationUsers(string roleName, Guid customerId, Guid digitalServiceId, List<string> notificationUsers)
+        {
+            try
+            {
+                if (roleName != "Admin")
+                {
+                    return new ResponseDTO(false, "You are not authorized. Please contact your administrator.");
+                }
+
+                var existingCustomer = await _customerRepository.GetById(customerId);
+                if (existingCustomer == null)
+                {
+                    return new ResponseDTO(false, "Customer not found.");
+                }
+
+                var digitalService = existingCustomer.DigitalServices.FirstOrDefault(ds => ds.DigitalServiceID == digitalServiceId);
+                if (digitalService == null)
+                {
+                    return new ResponseDTO(false, "Digital service not found.");
+                }
+
+                foreach (var user in notificationUsers)
+                {
+                    if (!digitalService.NotificationUsers.Contains(user))
+                    {
+                        digitalService.NotificationUsers.Add(user);
+                    }
+                }
+
+                var customerResponse = await _customerRepository.Update(existingCustomer.CustomerID, existingCustomer);
+                var customerDTO = new CustomerDTO(customerResponse);
+
+                return new ResponseDTO(true, "Notification users successfully added.", customerDTO);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false, "An unexpected error occurred: " + ex.Message);
+            }
+        }
+
     }
 }

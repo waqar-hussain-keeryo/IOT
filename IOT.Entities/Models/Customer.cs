@@ -7,10 +7,7 @@ namespace IOT.Entities.Models
 {
     public class Customer
     {
-        public Customer()
-        {
-            
-        }
+        public Customer() { }
 
         public Customer(CustomerRequest request)
         {
@@ -103,10 +100,8 @@ namespace IOT.Entities.Models
 
     public class Device
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public ObjectId Id { get; set; }
-
+        [BsonElement("DeviceID")]
+        [BsonRepresentation(BsonType.String)]
         [Required]
         public Guid DeviceID { get; set; } = Guid.NewGuid();
 
@@ -122,10 +117,8 @@ namespace IOT.Entities.Models
 
     public class DigitalService
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public ObjectId Id { get; set; }
-
+        [BsonElement("DigitalServiceID")]
+        [BsonRepresentation(BsonType.String)]
         [Required]
         public Guid DigitalServiceID { get; set; } = Guid.NewGuid();
 

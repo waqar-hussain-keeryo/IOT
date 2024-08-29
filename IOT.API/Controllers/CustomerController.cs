@@ -151,7 +151,7 @@ namespace IOT.Api.Controllers
             try
             {
                 var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
-                var response = await _customerService.CreateSites(roleName, customerId, request);
+                var response = await _customerService.AddSites(roleName, customerId, request);
 
                 return response.Success
                     ? Ok(new ApiResponse(true, response.Message, response.Data))
@@ -166,12 +166,132 @@ namespace IOT.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost("UpdateSite")]
-        public async Task<IActionResult> UpdateSite(Guid customerId, SiteRequest request)
+        public async Task<IActionResult> UpdateSite(Guid customerId, Guid siteId, SiteRequest request)
         {
             try
             {
                 var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
-                var response = await _customerService.UpdateSites(roleName, customerId, request);
+                var response = await _customerService.UpdateSites(roleName, customerId, siteId, request);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("AddDevice")]
+        public async Task<IActionResult> AddDevice(Guid customerId, Guid siteId, DeviceRequest request)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.AddDevices(roleName, customerId, siteId, request);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("UpdateDevice")]
+        public async Task<IActionResult> UpdateDevice(Guid customerId, Guid siteId, Guid deviceId, DeviceRequest request)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.UpdateDevices(roleName, customerId, siteId, deviceId, request);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("AddCustomerUser")]
+        public async Task<IActionResult> AddCustomerUser(Guid customerId, List<string> customerUsers)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.AddCustomerUsers(roleName, customerId, customerUsers);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("AddDigitalService")]
+        public async Task<IActionResult> AddDigitalService(Guid customerId, DigitalServiceRequest request)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.AddDigitalServices(roleName, customerId, request);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("UpdateDigitalService")]
+        public async Task<IActionResult> UpdateDigitalService(Guid customerId, Guid digitalServiceId, DigitalServiceRequest request)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.UpdateDigitalServices(roleName, customerId, digitalServiceId, request);
+
+                return response.Success
+                    ? Ok(new ApiResponse(true, response.Message, response.Data))
+                    : BadRequest(new ApiResponse(false, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                   new ApiResponse(false, "An unexpected error occurred." + ex.Message));
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("AddNotificationUser")]
+        public async Task<IActionResult> AddNotificationUser(Guid customerId, Guid digitalServiceId, List<string> notificationUsers)
+        {
+            try
+            {
+                var roleName = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var response = await _customerService.AddNotificationUsers(roleName, customerId, digitalServiceId, notificationUsers);
 
                 return response.Success
                     ? Ok(new ApiResponse(true, response.Message, response.Data))
